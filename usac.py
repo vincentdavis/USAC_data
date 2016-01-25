@@ -39,3 +39,12 @@ def get_event(session, event_id):
         return info
     else:
         return None
+
+def get_event_list(session, year):
+    """
+
+    :param year:
+    :return:
+    """
+    events = r.get("http://www.usacycling.org/events/?zipcode=80439&radius=50000&race=&fyear=" + year + "&rrfilter=rr" , headers=HDRS)
+
