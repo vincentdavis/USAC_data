@@ -1,6 +1,7 @@
 import requests
 from bs4 import BeautifulSoup
 import json
+import re
 
 
 HDRS = {'User-Agent':'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
@@ -40,11 +41,46 @@ def get_event(session, event_id):
     else:
         return None
 
-def get_event_list(session, year):
+def get_event_list(year, zipcode=80919, radius=10000, filename):
     """
 
     :param year:
     :return:
     """
-    events = r.get("http://www.usacycling.org/events/?zipcode=80439&radius=50000&race=&fyear=" + year + "&rrfilter=rr" , headers=HDRS)
+    r = init_session()
+    eventspage = r.get("http://www.usacycling.org/events/?zipcode=" + str(zipcode)
+                   +"&radius=" + str(radius) + "&race=&fyear=" + year + "&rrfilter=rr" , headers=HDRS)
+    s = BeautifulSoup(eventspage.text, 'html.parser')
+    row = s.find('table').find('tr')  # Search result row
+    # print('*** {}'.format(row.get_text()))
+    row = row.find_next_sibling() # Column header row
+    # print('*** {}'.format(row.get_text()))
+    with open(filename, 'w') as csvfile:
+        #These are the event rows.
+        fieldnames = ['event', 'permit_number', 'dates', 'flyer', 'event_website', 'online_reg']
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        for r in row.find_next_siblings():
+            data = {}
+            cells = row.find_all('td') # rows are divided into 3 columns
+            data['name'] = cells[1].find('b') # event Name
+            data['permit_number'] = cells[1].find(text = re.compile("\s+Permit Number:\s\S+"))
+            data['dates'] = cells[1].find(text = re.compile("\s+\d{2}/\d{2}/\d{4}"))
+            data['flyer'] = cells[1].find('a', href=True, text='Event Flyer')['href']
+            data['event_website'] = cells[1].find('a', href=True, text='Event Website')['href']
+            data['permit_number'] = cells[1].find(text = re.compile("\s+Permit Number:\s\S+"))
+            data['online_reg'] = cells[1].find(text = re.compile("\s+Permit Number:\s\S+"))
+
+            getdata = {}
+            getdata['name'] = (lambda cell: cell.find('b')) # event Name
+            getdata['permit_number'] = (lambda cell: cell.find(text = re.compile("\s+Permit Number:\s\S+")))
+            getdata['dates'] = (lambda cell: cell.find(text = re.compile("\s+\d{2}/\d{2}/\d{4}")))
+            getdata['flyer'] = (lambda cell: cell.find('a', href=True, text='Event Flyer')['href'])
+            getdata['event_website'] = (lambda cell: cell.find('a', href=True, text='Event Website')['href'])
+            getdata['permit_number'] = (lambda cell: cell.find(text = re.compile("\s+Permit Number:\s\S+")))
+            getdata['online_reg'] = (lambda cell: cell.find(text = re.compile("\s+Permit Number:\s\S+")))
+
+        for key in data.keys():
+            try:
+
+
 
