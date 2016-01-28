@@ -1,10 +1,15 @@
 from bs4 import BeautifulSoup as bs
+from usac import init_session
 import re
 from db import DB, Event, EventType, EventIs
 import requests
-from bs4 import BeautifulSoup
-import json
-import re
+
+
+states = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DC", "DE", "FL", "GA",
+          "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
+          "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
+          "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
+          "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
 
 def race_types(cells):
     """
@@ -42,7 +47,7 @@ def parse_event_row(row):
 def load_events_past(page):
     """
     This is for bulk loading of events. This is not designed for updating the database.
-    The html file data/events_94-15.html has all events available 1994 through the end of 2015
+    The html file data/events_page_example.html has all events available 1994 through the end of 2015
     :param htmlfile:
     :return:
     """
@@ -69,5 +74,24 @@ def load_events_past(page):
                 print(e)
                 raise
 
-def get_past_events(year):
-    pass
+def get_past_events(start, end, states, files=True, savepages=''):
+    """
+    Base URL example
+    http://www.usacycling.org/events/?state=CO&race=&fyear=2015&rrfilter=rr
+
+    :param year:
+    :param files: folder containing files
+    :return:
+    """
+    if not files: req = init_session()
+    for year in range(start, end): #Get all past events
+        for state in states:
+            if not files:
+                eventspage = req.get("http://www.usacycling.org/events/?state=" + state + "&race=&fyear=" + str(year) + "&rrfilter=rr" , headers=HDRS).text
+                if savepages:
+                    with open('{}events_{}_{}'.format(savepages, state, year), 'w') as f:
+                        f.writer(eventspage)
+            else:
+                with open('{}events_{}_{}'.format(savepages, state, year), 'r') as f:
+                    eventspage = f.read()
+            load_events_past(eventspage)
