@@ -17,7 +17,7 @@ def DB_INIT(remove=False):
         except:
             pass
         DB.connect()
-        DB.create_tables([Event])
+        DB.create_tables([Event, EventIs, EventType])
 
 class BaseModel(Model):
     class Meta:
@@ -35,3 +35,18 @@ class Event(BaseModel):
     director = CharField(null=True)
     race_cat  = CharField(null=True)
     Timestamp = DateTimeField(default=datetime.datetime.now)
+
+
+class EventType(BaseModel):
+    raceType = CharField(null=False, unique=True)
+
+
+class EventIs(BaseModel):
+    """
+    query = (Event
+     .select()
+     .join(EventIs)
+     .join(EventType))
+    """
+    anEvent = ForeignKeyField(Event)
+    anEventType = ForeignKeyField(EventType)
