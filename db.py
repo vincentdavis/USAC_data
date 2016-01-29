@@ -50,3 +50,4 @@ class EventIs(BaseModel):
     """
     anEvent = ForeignKeyField(Event)
     anEventType = ForeignKeyField(EventType)
+

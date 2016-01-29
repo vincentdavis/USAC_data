@@ -21,7 +21,7 @@ def json_text(j):
     """
     return BeautifulSoup(json.loads(j.text)['message'], 'html.parser')
 
-def get_event(session, event_id):
+def get_event_details(session, event_id):
     """
     Get event details. I think each day is an event for multi day events like CX nationals
     :param session: Requests session that has been initiated at usac
@@ -44,7 +44,7 @@ def get_event(session, event_id):
 
 def get_event_list(year, zipcode=80919, radius=10000):
     """
-
+    This will be use for updating events. See tools/get_past_events() for initial loading of past events
     """
     req = init_session()
     eventspage = req.get("http://www.usacycling.org/events/?zipcode=" + str(zipcode)+"&radius=" + str(radius) + "&race=&fyear=" + str(year) + "&rrfilter=rr" , headers=HDRS)
