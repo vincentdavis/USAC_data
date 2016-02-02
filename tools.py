@@ -89,9 +89,9 @@ def get_past_events(start, end, states, files=True, savepages=''):
             if not files:
                 eventspage = req.get("http://www.usacycling.org/events/?state=" + state + "&race=&fyear=" + str(year) + "&rrfilter=rr" , headers=HDRS).text
                 if savepages:
-                    with open('{}events_{}_{}'.format(savepages, state, year), 'w') as f:
+                    with open('{0}events_{1}_{2}'.format(savepages, state, year), 'w') as f:
                         f.writer(eventspage)
             else:
-                with open('{}events_{}_{}'.format(savepages, state, year), 'r') as f:
+                with open('{0}events_{1}_{2}'.format(savepages, state, year), 'r') as f:
                     eventspage = f.read()
             load_events_past(eventspage)
