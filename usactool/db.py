@@ -18,6 +18,8 @@ def DB_INIT(remove=False):
             pass
         DB.connect()
         DB.create_tables([Event, EventIs, EventType])
+    else:
+        DB.connect()
 
 class BaseModel(Model):
     class Meta:
