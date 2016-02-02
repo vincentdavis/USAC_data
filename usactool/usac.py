@@ -1,25 +1,11 @@
-from db import DB, Event
+
+
 import requests
 from bs4 import BeautifulSoup
-import json
-import re
 
 
-HDRS = {'User-Agent':'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
 
-def init_session():
-    r = requests.session()
-    # We have to load this page first or other pages return unauthorized access
-    r.get('http://www.usacycling.org/results/index.php?year=2016&id=2', headers=HDRS)
-    return r
 
-def json_text(j):
-    """
-    Get text from Json
-    :param j: response json
-    :return: Beautifull soup object
-    """
-    return BeautifulSoup(json.loads(j.text)['message'], 'html.parser')
 
 def get_event_details(session, event_id):
     """

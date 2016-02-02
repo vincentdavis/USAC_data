@@ -1,9 +1,24 @@
-from bs4 import BeautifulSoup as bs
-from usac import init_session
 import re
-from db import DB, Event, EventType, EventIs
 import requests
+from bs4 import BeautifulSoup as bs
+import json
 
+from usactool.db import Event, EventType, EventIs
+
+def init_session():
+    r = requests.session()
+    HDRS = {'User-Agent':'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
+    # We have to load this page first or other pages return unauthorized access
+    r.get('http://www.usacycling.org/results/index.php?year=2016&id=2', headers=HDRS)
+    return r
+
+def json_text(j):
+    """
+    Get text from Json
+    :param j: response json
+    :return: Beautifull soup object
+    """
+    return bs(json.loads(j.text)['message'], 'html.parser')
 
 states = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DC", "DE", "FL", "GA",
           "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
@@ -76,6 +91,8 @@ def load_events_past(page):
 
 def get_past_events(start, end, states, files=True, savepages=''):
     """
+    This will load past events from files or web.
+    The savepages options save the html to files, or if files=True then reads from this location.
     Base URL example
     http://www.usacycling.org/events/?state=CO&race=&fyear=2015&rrfilter=rr
 
@@ -88,6 +105,8 @@ def get_past_events(start, end, states, files=True, savepages=''):
         for state in states:
             if not files:
                 eventspage = req.get("http://www.usacycling.org/events/?state=" + state + "&race=&fyear=" + str(year) + "&rrfilter=rr" , headers=HDRS).text
+                if '<small><sub>(200)</sub></small>' in eventspage.text: # we are not getting all the results on this page.
+                    raise
                 if savepages:
                     with open('{}events_{}_{}'.format(savepages, state, year), 'w') as f:
                         f.writer(eventspage)
