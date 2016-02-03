@@ -3,7 +3,9 @@ import requests
 from bs4 import BeautifulSoup as bs
 import json
 import time
-
+import logging
+import importlib
+importlib.reload(logging)
 from usactool.db import Event, EventType, EventIs, DB
 
 HDRS = {'User-Agent':'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
@@ -121,17 +123,21 @@ def get_past_events(start, end, states, pageloc='URL', fileloc='', delay=5):
     if pageloc == 'URL': req = init_session()
     for year in range(start, end): #Get all past events
         for state in states:
-            time.sleep(delay)
             if pageloc == 'URL':
+                time.sleep(delay)
                 eventspage = req.get("http://www.usacycling.org/events/?state=" + state + "&race=&fyear=" + str(year) + "&rrfilter=rr" , headers=HDRS).text
                 if '<small><sub>(200)</sub></small>' in eventspage: # we are not getting all the results on this page.
-                    raise
+                    continue
                 if fileloc:
                     with open('{}events_{}_{}'.format(fileloc, state, year), 'w') as f:
                         f.write(eventspage)
             elif pageloc == 'FILE':
-                with open('{}events_{}_{}'.format(fileloc, state, year), 'r') as f:
-                    eventspage = f.read()
+                try:
+                    with open('{}events_{}_{}'.format(fileloc, state, year), 'r') as f:
+                        eventspage = f.read()
+                except:
+                    print("no file state: {}, year: {}".format(state, year))
+                    continue
             if "<i>Sorry, no events were found.</i>" not in eventspage:
                 load_events_past(eventspage)
             else:
