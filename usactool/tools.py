@@ -3,10 +3,12 @@ import requests
 from bs4 import BeautifulSoup as bs
 import json
 import time
+from usactool.db import Event, EventType, EventIs, DB
+
 import logging
 import importlib
 importlib.reload(logging)
-from usactool.db import Event, EventType, EventIs, DB
+logging.basicConfig(filename='example.log',level=logging.WARNING)
 
 HDRS = {'User-Agent':'Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)'}
 
@@ -29,7 +31,7 @@ states = ["AL", "AK", "AZ", "AR", "CA", "CO", "CT", "DC", "DE", "FL", "GA",
           "HI", "ID", "IL", "IN", "IA", "KS", "KY", "LA", "ME", "MD",
           "MA", "MI", "MN", "MS", "MO", "MT", "NE", "NV", "NH", "NJ",
           "NM", "NY", "NC", "ND", "OH", "OK", "OR", "PA", "RI", "SC",
-          "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY"]
+          "SD", "TN", "TX", "UT", "VT", "VA", "WA", "WV", "WI", "WY", 'CN', 'CS']
 
 def race_types(cells):
     """
@@ -38,23 +40,27 @@ def race_types(cells):
     :return:
     """
     try:
-        race_cat = [t.strip() for t in cells[3].find_all(text=True) if 'Category - ' in t]
+        race_cat = [t.strip() for t in cells[3].find_all(text=True) if '^Category - ' in t]
     except:
-        print("race_cat error:\n{}".format(cells))
+        logging.error("race_cat error. Cell count = {}\n{}".format(len(cells), cells))
+        #print("race_cat error:\n{}".format(cells))
         race_cat = ''
     try:
         race_type = [t.strip() for t in cells[3].find_all(text=True) if 'Category - ' not in t]
     except:
-        print("race_type error:\n{}".format(cells))
+        logging.error("race_type error. Cell count = {}\n{}".format(len(cells), cells))
+        #print("race_type error:\n{}".format(cells))
         race_type = ''
 
     return race_cat, race_type
 
 
 def parse_event_row(row):
+    states = ['IA', 'KS', 'UT', 'VA', 'NC', 'NE', 'SD', 'AL', 'ID', 'FM', 'DE', 'AK', 'CT', 'PR', 'NM', 'MS', 'PW', 'CO', 'NJ', 'FL', 'MN', 'VI', 'NV', 'AZ', 'WI', 'ND', 'PA', 'OK', 'KY', 'RI', 'NH', 'MO', 'ME', 'VT', 'GA', 'GU', 'AS', 'NY', 'CA', 'HI', 'IL', 'TN', 'MA', 'OH', 'MD', 'MI', 'WY', 'WA', 'OR', 'MH', 'SC', 'IN', 'LA', 'MP', 'DC', 'MT', 'AR', 'WV', 'TX']
     getdata = dict()
     getdata['event_name'] = (lambda cells: cells[1].find('b').get_text().strip()) # event Name
-    getdata['location'] = (lambda cells: cells[1].find(text = re.compile("^[a-zA-Z .]+, [A-Z]{2}")).strip())
+    #getdata['location'] = (lambda cells: cells[1].find(text = re.compile("^[a-zA-Z ,./&-']+, [A-Z]{2}$")).strip())
+    getdata['location'] = (lambda cells: cells[1].find(text = re.compile(', (' + '|'.join(states) + ")$")).strip())
     getdata['dates'] = (lambda cells: cells[1].find(text = re.compile("\s+\d{2}/\d{2}/\d{4}")).strip())
     getdata['flyer'] = (lambda cells: cells[1].find('a', href=True, text='Event Flyer')['href'])
     getdata['event_website'] = (lambda cells: cells[1].find('a', href=True, text='Event Website')['href'])
@@ -64,6 +70,7 @@ def parse_event_row(row):
     getdata['director'] = (lambda cells: cells[2].find('a', href='javascript:void(0)',).get_text().strip())
 
     cells = row.find_all('td', recursive=False)
+    assert(len(cells)==4)
     rcat, rtype = race_types(cells)
     rowdata = dict()
     row['race_cat'] = rcat
@@ -74,7 +81,7 @@ def parse_event_row(row):
             rowdata[key] = ''
     return rowdata, rtype
 
-def load_events_past(page):
+def load_events_past(page, state):
     """
     This is for bulk loading of events. This is not designed for updating the database.
     The html file data/events_page_example.html has all events available 1994 through the end of 2015
@@ -82,32 +89,33 @@ def load_events_past(page):
     :return:
     """
     DB.connect()
+    page = page.replace('<em>','').replace('</em>','').replace('&#x', ')')
     s = bs(page, 'html.parser')
-
-    row = s.find('table').find('tr')  # Search result row
-    # print('*** {}'.format(row.get_text()))
-    row = row.find_next_sibling() # Column header row
-    # print('*** {}'.format(row.get_text()))
-
-    for r in row.find_next_siblings(): #These are the event rows.
-        if 'Try another search' not in r.get_text():
-            try:
-                rowdata, rtype = parse_event_row(r)
+    t = s.find('table')
+    for r in t.find_all('tr', recursive=False): #These are the event rows.
+        if 'National Rankings System' not in r.get_text() and 'Event Information' not in r.get_text():
+            if 'Try another search' not in r.get_text():
                 try:
-                    if rowdata['event_name']:
-                        ev = Event.create(**rowdata)
+                    rowdata, rtype = parse_event_row(r)
+                    try:
+                        if rowdata['event_name']:
+                            rowdata['state']= state
+                            ev = Event.create(**rowdata)
+                    except Exception as e:
+                        logging.error(e)
+                        print(e)
+                    try:
+                        for t in rtype:
+                            et, created = EventType.get_or_create(raceType=t)
+                            EventIs.create(anEvent=ev, anEventType=et)
+                    except Exception as e:
+                        #print(e)
+                        logging.error(e)
+                        raise
                 except Exception as e:
-                    print(e)
-                try:
-                    for t in rtype:
-                        et, created = EventType.get_or_create(raceType=t)
-                        EventIs.create(anEvent=ev, anEventType=et)
-                except Exception as e:
-                    print(e)
+                    logging.error(r.find_all('td', recursive=False))
+                    #print(r)
                     raise
-            except Exception as e:
-                print(r)
-                raise
 
 
 def get_past_events(start, end, states, pageloc='URL', fileloc='', delay=5):
@@ -136,9 +144,11 @@ def get_past_events(start, end, states, pageloc='URL', fileloc='', delay=5):
                     with open('{}events_{}_{}'.format(fileloc, state, year), 'r') as f:
                         eventspage = f.read()
                 except:
-                    print("no file state: {}, year: {}".format(state, year))
+                    logging.error("no file state: {}, year: {}".format(state, year))
+                    # print("no file state: {}, year: {}".format(state, year))
                     continue
             if "<i>Sorry, no events were found.</i>" not in eventspage:
-                load_events_past(eventspage)
+                load_events_past(eventspage, state)
             else:
-                print("No events for state {} and year {}".format(state, year))
+                logging.warning("No events for state {} and year {}".format(state, year))
+                # print("No events for state {} and year {}".format(state, year))

@@ -28,6 +28,7 @@ class BaseModel(Model):
 class Event(BaseModel):
     event_name = CharField(null=False) # Schedule SCH im Jefferson county
     location = CharField(null=True)
+    state = CharField(null=True)
     dates = CharField(null=True)
     flyer = CharField(null=True)
     event_website = CharField(null=True)
