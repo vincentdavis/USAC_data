@@ -152,3 +152,15 @@ def get_past_events(start, end, states, pageloc='URL', fileloc='', delay=5):
             else:
                 logging.warning("No events for state {} and year {}".format(state, year))
                 # print("No events for state {} and year {}".format(state, year))
+
+
+def get_racer_results(licence, pageloc='FILE', req=False):
+    """
+    http://www.usacycling.org/results/index.php?compid=124587
+    :param licence:
+    :return:
+    """
+    if pageloc == 'URL': req = init_session()
+    resultspage = req.get("http://www.usacycling.org/results/index.php?compid=" + licence, headers=HDRS).text
+
+
