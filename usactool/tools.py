@@ -97,56 +97,60 @@ def load_events_past(page, state):
     page = page.replace('<em>', '').replace('</em>', '').replace('&#x', ')')
     s = bs(page, 'html.parser')
     t = s.find('table')
-    for r in t.find_all('tr', recursive=False):  # These are the event rows.
-        if 'National Rankings System' not in r.get_text() and 'Event Information' not in r.get_text():
-            if 'Try another search' not in r.get_text():
-                try:
-                    rowdata, rtype = parse_event_row(r)
+    try:
+        for r in t.find_all('tr', recursive=False):  # These are the event rows.
+            if 'National Rankings System' not in r.get_text() and 'Event Information' not in r.get_text():
+                if 'Try another search' not in r.get_text():
                     try:
-                        if rowdata['event_name']:
-                            rowdata['state'] = state
-                            ev = Event.create(**rowdata)
+                        rowdata, rtype = parse_event_row(r)
+                        try:
+                            if rowdata['event_name']:
+                                rowdata['state'] = state
+                                ev = Event.create(**rowdata)
+                        except Exception as e:
+                            logging.error(e)
+                            print(e)
+                        try:
+                            for t in rtype:
+                                et, created = EventType.get_or_create(raceType=t)
+                                EventIs.create(anEvent=ev, anEventType=et)
+                        except Exception as e:
+                            # print(e)
+                            logging.error(e)
+                            raise
                     except Exception as e:
-                        logging.error(e)
-                        print(e)
-                    try:
-                        for t in rtype:
-                            et, created = EventType.get_or_create(raceType=t)
-                            EventIs.create(anEvent=ev, anEventType=et)
-                    except Exception as e:
-                        # print(e)
-                        logging.error(e)
+                        logging.error(r.find_all('td', recursive=False))
+                        # print(r)
                         raise
-                except Exception as e:
-                    logging.error(r.find_all('td', recursive=False))
-                    # print(r)
-                    raise
+    except Exception as e:
+        logging.error(2)
+        print(s)
 
 
-def get_past_events(start, end, states, pageloc='URL', fileloc='', delay=5):
+def get_past_events(start_yr, end_yr, states, get_page_from='URL', save_page='', delay=5):
     """
     This will load past events from files or web.
-    Base URL example
+    Base URL example, they now call this the legacy page
     http://www.usacycling.org/events/?state=CO&race=&fyear=2015&rrfilter=rr
 
     :param year:
-    :param pageloc: folder containing files
+    :param get_page_from: folder containing files
     :return:
     """
-    if pageloc == 'URL': req = init_session()
-    for year in range(start, end):  # Get all past events
+    if get_page_from == 'URL': req = init_session()
+    for year in range(start_yr, end_yr):  # Get all past events
         for state in states:
-            if pageloc == 'URL':
+            if get_page_from == 'URL': # Load pages from the website.
                 time.sleep(delay)
-                eventspage = req.get("http://www.usacycling.org/events/?state=" + state + "&race=&fyear=" + str(year) + "&rrfilter=rr", headers=HDRS).text
+                eventspage = req.get("http://legacy.usacycling.org/events/?state=" + state + "&race=&fyear=" + str(year) + "&rrfilter=rr", headers=HDRS).text
                 if '<small><sub>(200)</sub></small>' in eventspage:  # we are not getting all the results on this page.
                     continue
-                if fileloc:
-                    with open('{}events_{}_{}'.format(fileloc, state, year), 'w') as f:
+                if save_page:
+                    with open('{}events_{}_{}'.format(save_page, state, year), 'w') as f:
                         f.write(eventspage)
-            elif pageloc == 'FILE':
+            elif get_page_from == 'FILE': # load data from already download pages
                 try:
-                    with open('{}events_{}_{}'.format(fileloc, state, year), 'r') as f:
+                    with open('{}events_{}_{}'.format(save_page, state, year), 'r') as f:
                         eventspage = f.read()
                 except:
                     logging.error("no file state: {}, year: {}".format(state, year))
