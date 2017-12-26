@@ -1,0 +1,2 @@
+USAC_data
+peewee==2.10.2
