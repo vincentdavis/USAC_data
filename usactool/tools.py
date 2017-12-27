@@ -1,12 +1,14 @@
 import re
-import requests
-from bs4 import BeautifulSoup as bs
 import json
 import time
-from usactool.db import Event, EventType, EventIs, DB, DB_INIT
-
 import logging
 import importlib
+
+import requests
+from bs4 import BeautifulSoup as bs
+
+from usactool.db import Event, EventType, EventIs, DB, DB_INIT
+
 
 importlib.reload(logging)
 logging.basicConfig(filename='example.log', level=logging.WARNING)
@@ -137,7 +139,8 @@ def get_past_events(start_yr, end_yr, states, get_page_from='URL', save_page='',
     :param get_page_from: folder containing files
     :return:
     """
-    if get_page_from == 'URL': req = init_session()
+    if get_page_from == 'URL':
+        req = init_session()
     for year in range(start_yr, end_yr):  # Get all past events
         for state in states:
             if get_page_from == 'URL': # Load pages from the website.
@@ -156,6 +159,7 @@ def get_past_events(start_yr, end_yr, states, get_page_from='URL', save_page='',
                     logging.error("no file state: {}, year: {}".format(state, year))
                     # print("no file state: {}, year: {}".format(state, year))
                     continue
+
             if "<i>Sorry, no events were found.</i>" not in eventspage:
                 load_events_past(eventspage, state)
             else:
@@ -169,6 +173,74 @@ def get_racer_results(licence, get_page_from='FILE', req=False):
     :param licence:
     :return:
     """
-    if get_page_from == 'URL': req = init_session()
+    if get_page_from == 'URL':
+        req = init_session()
     resultspage = req.get("http://www.usacycling.org/results/index.php?compid=" + licence, headers=HDRS).text
     return resultspage
+
+
+def get_results(race_id):
+	"""
+	Takes ID of a race and yields result table rows one by one
+
+	"""
+	req = init_session()
+	# Define headers
+	headers = {
+				"Accept": "application/json, text/javascript, */*; q=0.01",
+				"Accept-Encoding": "gzip, deflate",
+				"Accept-Language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+				"Host": "legacy.usacycling.org",
+				"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.84 Safari/537.36",
+				"X-Requested-With": "XMLHttpRequest"
+				}
+	# Get response from the race URL
+	race_url = "http://legacy.usacycling.org/results/index.php?ajax=1&act=loadresults&race_id={0}".format(race_id)
+	r = req.get(race_url, headers=headers)
+  	# Parse response JSON and get the results table
+	table_html = json.loads(r.text)["message"]
+	results_table = BeautifulSoup(table_html, 'html.parser').div
+	# Define rows with data and iterate through them
+	results_rows = results_table.find_all("div", recursive=False)[1:]
+	for results_row in results_rows:
+		row_dict = {}
+		# define data cells for each row
+		data_cells = results_row.find_all("div", recursive=False)
+		try:
+			row_dict["medal"] = data_cells[0].img["title"].strip()
+		except (AttributeError, TypeError, KeyError):
+			row_dict["medal"] = ""
+		try:
+			row_dict["place"] = data_cells[1].text.strip()
+		except IndexError:
+			row_dict["place"] = ""
+		try:
+			row_dict["points"] = data_cells[2].text.strip()
+		except IndexError:
+			row_dict["points"] = ""
+		try:
+			row_dict["name"] = data_cells[4].text.strip()
+		except IndexError:
+			row_dict["name"] = ""
+		try:
+			row_dict["city, state"] = data_cells[5].text.strip()
+		except IndexError:
+			row_dict["city, state"] = ""
+		try:
+			row_dict["time"] = data_cells[6].text.strip()
+		except IndexError:
+			row_dict["time"] = ""
+		try:
+			row_dict["usac #"] = data_cells[8].text.strip()
+		except IndexError:
+			row_dict["usac #"] = ""
+		try:
+			row_dict["bib"] = data_cells[9].text.strip()
+		except IndexError:
+			row_dict["bib"] = ""
+		try:
+			row_dict["team"] = data_cells[10].text.strip()
+		except IndexError:
+			row_dict["team"] = ""
+
+		yield row_dict
