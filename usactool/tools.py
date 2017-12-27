@@ -3,7 +3,7 @@ import requests
 from bs4 import BeautifulSoup as bs
 import json
 import time
-from usactool.db import Event, EventType, EventIs, DB
+from usactool.db import Event, EventType, EventIs, DB, DB_INIT
 
 import logging
 import importlib
@@ -86,14 +86,14 @@ def parse_event_row(row):
     return rowdata, rtype
 
 
-def load_events_past(page, state):
+def load_events_past(page, state, db_reset=False):
     """
     This is for bulk loading of events. This is not designed for updating the database.
     The html file data/events_page_example.html has all events available 1994 through the end of 2015
     :param htmlfile:
     :return:
     """
-    DB.connect()
+    DB_INIT(remove=db_reset)
     page = page.replace('<em>', '').replace('</em>', '').replace('&#x', ')')
     s = bs(page, 'html.parser')
     t = s.find('table')
@@ -163,11 +163,12 @@ def get_past_events(start_yr, end_yr, states, get_page_from='URL', save_page='',
                 # print("No events for state {} and year {}".format(state, year))
 
 
-def get_racer_results(licence, pageloc='FILE', req=False):
+def get_racer_results(licence, get_page_from='FILE', req=False):
     """
     http://www.usacycling.org/results/index.php?compid=124587
     :param licence:
     :return:
     """
-    if pageloc == 'URL': req = init_session()
+    if get_page_from == 'URL': req = init_session()
     resultspage = req.get("http://www.usacycling.org/results/index.php?compid=" + licence, headers=HDRS).text
+    return resultspage

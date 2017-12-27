@@ -2,6 +2,7 @@ from peewee import *
 import datetime
 import os
 
+
 DB = SqliteDatabase('usac.db')
 
 def DB_INIT(remove=False):
@@ -19,7 +20,12 @@ def DB_INIT(remove=False):
         DB.connect()
         DB.create_tables([Event, EventIs, EventType])
     else:
-        DB.connect()
+        if os.path.isfile('usac.db'):
+            DB.connect()
+        else:
+            DB.connect()
+            DB.create_tables([Event, EventIs, EventType])
+
 
 class BaseModel(Model):
     class Meta:
