@@ -88,6 +88,47 @@ def parse_event_row(row):
     return rowdata, rtype
 
 
+def get_past_events(start_yr, end_yr, states, get_page_from='URL', save_page='', delay=5):
+    """
+    This will load past events from files or web.
+    Base URL example, they now call this the legacy page
+    http://www.usacycling.org/events/?state=CO&race=&fyear=2015&rrfilter=rr
+
+    :param year:
+    :param get_page_from: folder containing files
+    :return:
+    """
+    if get_page_from == 'URL':
+        req = init_session()
+    for year in range(start_yr, end_yr):  # Get all past events
+        for state in states:
+            if get_page_from == 'URL': # Load pages from the website.
+                eventspage = req.get("http://legacy.usacycling.org/events/?state=" + state + "&race=&fyear=" + str(year) + "&rrfilter=rr", headers=HDRS).text
+                if '<small><sub>(200)</sub></small>' in eventspage:  # we are not getting all the results on this page.
+                    continue
+                if save_page:
+                    with open('{}events_{}_{}'.format(save_page, state, year), 'w') as f:
+                        f.write(eventspage)
+            elif get_page_from == 'FILE': # load data from already download pages
+                try:
+                    with open('{}events_{}_{}'.format(save_page, state, year), 'r') as f:
+                        eventspage = f.read()
+                except:
+                    logging.error("no file state: {}, year: {}".format(state, year))
+                    # print("no file state: {}, year: {}".format(state, year))
+                    continue
+
+            # Check if there are any events
+            if "Sorry, no events were found." in eventspage:
+                logging.warning("No events for state {} and year {}".format(state, year))
+                # print("No events for state {} and year {}".format(state, year))
+            else:
+                load_events_past(eventspage, state)
+
+            # Wait until loading the nex page
+            time.sleep(delay)
+
+
 def load_events_past(page, state, db_reset=False):
     """
     This is for bulk loading of events. This is not designed for updating the database.
@@ -117,54 +158,16 @@ def load_events_past(page, state, db_reset=False):
                                 et, created = EventType.get_or_create(raceType=t)
                                 EventIs.create(anEvent=ev, anEventType=et)
                         except Exception as e:
-                            # print(e)
+                            print(e)
                             logging.error(e)
                             raise
                     except Exception as e:
                         logging.error(r.find_all('td', recursive=False))
-                        # print(r)
+                        print(e)
                         raise
     except Exception as e:
         logging.error(2)
         print(s)
-
-
-def get_past_events(start_yr, end_yr, states, get_page_from='URL', save_page='', delay=5):
-    """
-    This will load past events from files or web.
-    Base URL example, they now call this the legacy page
-    http://www.usacycling.org/events/?state=CO&race=&fyear=2015&rrfilter=rr
-
-    :param year:
-    :param get_page_from: folder containing files
-    :return:
-    """
-    if get_page_from == 'URL':
-        req = init_session()
-    for year in range(start_yr, end_yr):  # Get all past events
-        for state in states:
-            if get_page_from == 'URL': # Load pages from the website.
-                time.sleep(delay)
-                eventspage = req.get("http://legacy.usacycling.org/events/?state=" + state + "&race=&fyear=" + str(year) + "&rrfilter=rr", headers=HDRS).text
-                if '<small><sub>(200)</sub></small>' in eventspage:  # we are not getting all the results on this page.
-                    continue
-                if save_page:
-                    with open('{}events_{}_{}'.format(save_page, state, year), 'w') as f:
-                        f.write(eventspage)
-            elif get_page_from == 'FILE': # load data from already download pages
-                try:
-                    with open('{}events_{}_{}'.format(save_page, state, year), 'r') as f:
-                        eventspage = f.read()
-                except:
-                    logging.error("no file state: {}, year: {}".format(state, year))
-                    # print("no file state: {}, year: {}".format(state, year))
-                    continue
-
-            if "<i>Sorry, no events were found.</i>" not in eventspage:
-                load_events_past(eventspage, state)
-            else:
-                logging.warning("No events for state {} and year {}".format(state, year))
-                # print("No events for state {} and year {}".format(state, year))
 
 
 def get_racer_results(licence, get_page_from='FILE', req=False):
