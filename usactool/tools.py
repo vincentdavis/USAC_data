@@ -226,17 +226,17 @@ def get_results(race_id):
         except IndexError:
             row_dict["name"] = ""
         try:
-            row_dict["city, state"] = data_cells[5].text.strip()
+            row_dict["city_state"] = data_cells[5].text.strip()
         except IndexError:
-            row_dict["city, state"] = ""
+            row_dict["city_state"] = ""
         try:
-            row_dict["time"] = data_cells[6].text.strip()
+            row_dict["race_time"] = data_cells[6].text.strip()
         except IndexError:
-            row_dict["time"] = ""
+            row_dict["race_time"] = ""
         try:
-            row_dict["usac #"] = data_cells[8].text.strip()
+            row_dict["usac_number"] = data_cells[8].text.strip()
         except IndexError:
-            row_dict["usac #"] = ""
+            row_dict["usac_number"] = ""
         try:
             row_dict["bib"] = data_cells[9].text.strip()
         except IndexError:
@@ -296,7 +296,7 @@ def get_lap_times(race_id):
         lap_number = 1
         while True:
             try:
-                row_dict["Lap {0}".format(lap_number)] = data_cells[column_index].text.strip()
+                row_dict["lap_{0}".format(lap_number)] = data_cells[column_index].text.strip()
             except (IndexError, AttributeError):
                 break
 

@@ -60,3 +60,30 @@ class EventIs(BaseModel):
     anEvent = ForeignKeyField(Event)
     anEventType = ForeignKeyField(EventType)
 
+class RaceResults(BaseModel):
+    race_id = CharField(null=False)
+    medal = CharField(null=True)
+    place = CharField(null=True)
+    points = CharField(null=True)
+    name = CharField(null=True)
+    city_state = CharField(null=True)
+    race_time = CharField(null=True)
+    usac_number = CharField(null=True)
+    bib = CharField(null=True)
+    team = CharField(null=True)
+
+
+class Laps(BaseModel):
+    race_id = CharField(null=False)
+    place = CharField(null=True)
+    name = CharField(null=True)
+    lap_1 = CharField(null=True)
+    lap_2 = CharField(null=True)
+    lap_3 = CharField(null=True)
+    lap_4 = CharField(null=True)
+    lap_5 = CharField(null=True)
+    lap_6 = CharField(null=True)
+    lap_7 = CharField(null=True)
+    lap_8  = CharField(null=True)
+    lap_9 = CharField(null=True)
+    lap_10  = CharField(null=True)
